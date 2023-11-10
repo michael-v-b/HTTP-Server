@@ -44,4 +44,6 @@ def handle_login_credentials():
     with open('accounts.json', 'r') as f:
         accounts = json.load(f)
 
+    with open('passwords.json', 'r') as f:
+        passwords = json.load(f)
         
