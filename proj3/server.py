@@ -3,6 +3,9 @@ import logging
 import random
 import requests
 
+
+#ALERT ALERT ALERT NOAM ARANA IS GAY, REPEAT NOAM ARANA IS GAY!!!!
+
 def login_request():
     # Get the username and password from the user.
     username = requests.get('username')
