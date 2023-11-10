@@ -1,3 +1,4 @@
+import json
 import logging
 import random
 import requests
@@ -37,4 +38,7 @@ def login_request():
 #This function handles the login credentials for a given user. It returns True if the credentials are correct and False otherwise.    
 def handle_login_credentials():
     
-    with open('accounts.json', )
+    with open('accounts.json', 'r') as f:
+        accounts = json.load(f)
+
+        
