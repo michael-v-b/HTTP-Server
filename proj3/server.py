@@ -4,6 +4,12 @@ import random
 import requests
 
 
+def main():
+    username = inpunt("Username: ")
+    password = inpunt("Password: ")
+    response = login_request(username, password, accounts.json)
+    
+
 #ALERT ALERT ALERT NOAM ARANA IS GAY, REPEAT NOAM ARANA IS GAY!!!!
 
 def login_request():
