@@ -1,7 +1,4 @@
-import hashlib
-import json
-import random
-import sys
+import hashlib, json, random, sys, socket, datetime
 
 
 def main():
@@ -18,7 +15,7 @@ def main():
     session_timeout = sys.argv[4]
     root_directory = sys.argv[5]
 
-    with open('accounts_file', 'r') as f:
+    with open(accounts_file, 'r') as f:
         accounts = json.load(f)
 
      # Get the username and password from the user.
@@ -26,6 +23,8 @@ def main():
     password = input("Password: ")
     message = login_request(username, password, accounts)
     print (message)
+
+    
     return message
 
 #ALERT ALERT ALERT NOAM ARANA IS GAY, REPEAT NOAM ARANA IS GAY!!!!
@@ -43,11 +42,12 @@ def http_request():
     return output
 
 def login_request(username, password, accounts_file):
-   
+    t= datetime.datetime.now()
+    output = "SERVER LOG: {}-{}-{}-{}-{}-{} ".format(t.year,t.month,t.day,t.hour,t.minute,t.day)
     # Validates "username" and "password" from headers, return 501 and log "LOGIN FAILED" if missing.
     if not username or not password:
         message = ('LOGIN FAILED')
-        print(message)
+        print(output+message)
         return "HTTP/1.1 501 Not Implemented\r\n\r\n"
     
     # Create a session with the given credentials. 
@@ -63,7 +63,7 @@ def login_request(username, password, accounts_file):
         return f"HTTP/1.1 200 OK\r\nSet-Cookie: sessionID={session_id}\r\n\r\nLogged in!"
     else:
         message = (f'LOGIN FAILED: {username} : {password}')
-
+        print(output + message)
         # Return the status code with the message
         return "HTTP/1.1 200 OK\r\n\r\nLogin failed!"
 
@@ -71,11 +71,10 @@ def login_request(username, password, accounts_file):
 def handle_login_credentials(username, password, accounts):
 
     # Retrieve user info from accounts
-    if user_info:
-        hashed_password = hashlib.sha256((password + user_info['salt']).encode()).hexdigest()
-        hashed_password = user_info['password']
-        user_info = accounts.get(username)
-        return user_info
+    if username in accounts:
+        recorded_hashed_password,salt = accounts[username]
+        hashed_password = hashlib.sha256((password + salt).encode()).hexdigest()
+        return hashed_password == recorded_hashed_password
     return False
 
 if __name__ == "__main__":
