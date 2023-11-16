@@ -15,6 +15,21 @@ def main():
     session_timeout = sys.argv[4]
     root_directory = sys.argv[5]
 
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as httpSocket:
+    
+        httpSocket.bind((ip,int(port)))
+        httpSocket.listen(5)
+        client,clientPort = httpSocket.accept()
+
+        with client:
+            while True:
+                message = client.recv(1024)
+                if(message.decode() != ""):
+                    print("works")
+                    break; 
+
+        
+
     with open(accounts_file, 'r') as f:
         accounts = json.load(f)
 
