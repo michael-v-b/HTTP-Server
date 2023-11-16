@@ -14,6 +14,8 @@ def main():
     accounts_file = sys.argv[3]
     session_timeout = sys.argv[4]
     root_directory = sys.argv[5]
+    with open(accounts_file, 'r') as f:
+        accounts = json.load(f)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as httpSocket:
     
@@ -23,24 +25,41 @@ def main():
 
         with client:
             while True:
-                message = client.recv(1024)
-                if(message.decode() != ""):
-                    print("works")
-                    break; 
+                encoded_message = client.recv(1024)
+                print("encoded_message: {}".format(encoded_message))
+                message = encoded_message.decode()
+                print("message: {}".format(message))
+                lines = message.split("\r\n")
+                command = lines[0]
+                print("lines: {}".format(lines))
+
+                if "POST" in command:
+                    #get username
+                    print("lines[4]: {}".format(lines))
+                    username = lines[4][10:len(lines[4])]
+                    password = lines[5][10:len(lines[5])]
+                    print("username: {}".format(username.encode("ascii")))
+                    print("password: {}".format(password.encode("ascii")))
+                    message = login_request(username, password, accounts)
+                    print (message)
+                    break
+                elif "GET" in command:
+                    print("get it b") 
+                    break
+                else:
+                    print("happens : {}".format(command))
+                    break
 
         
 
-    with open(accounts_file, 'r') as f:
-        accounts = json.load(f)
+ 
 
-     # Get the username and password from the user.
-    username = input("Username: ")
-    password = input("Password: ")
-    message = login_request(username, password, accounts)
-    print (message)
+    # Get the username and password from the user.
+    
 
     
     return message
+        
 
 #ALERT ALERT ALERT NOAM ARANA IS GAY, REPEAT NOAM ARANA IS GAY!!!!
 
