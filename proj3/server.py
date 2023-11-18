@@ -14,6 +14,7 @@ def main():
     accounts_file = sys.argv[3]
     session_timeout = sys.argv[4]
     root_directory = sys.argv[5]
+    sessionCookies = {}
     with open(accounts_file, 'r') as f:
         accounts = json.load(f)
 
@@ -35,10 +36,10 @@ def main():
                 command = lines[0]
 
                 if "POST" in command:
-                    okMessage = post_command(lines,accounts)
+                    okMessage = post_command(lines,accounts,sessionCookies)
                     client.send(okMessage.encode())
                 elif "GET" in command:
-                    print("we got the get B)") 
+                    getMessage = get_command(root_directory)
                     break
                 else:
                     print("happens : {}".format(command))
@@ -49,23 +50,33 @@ def main():
  
 
     # Get the username and password from the user.
-    
+def print_server_log (message):
+    t= datetime.datetime.now()
+    time_string =  "{}-{}-{}-{}-{}-{}".format(t.year,t.month,t.day,t.hour,t.minute,t.day)
+    print("SERVER LOG: " + time_string + " " + message)
+    return t
 
+def get_command(root_directory,username):
+    print("test")
     
-def post_command(lines,accounts):
-    currentTime = get_current_time()
+    
+def post_command(lines,accounts,sessionCookies):
     #get username
-    username = lines[4][10:len(lines[4])]
-    password = lines[5][10:len(lines[5])]
-    okMessage, mess = login_request(username, password, accounts)
-    print ("SERVER LOG: " + currentTime + " " + mess)
+    okMessage = ""
+    if(len(lines) < 5 or len(lines[4]) < 10 or len(lines[5]) < 10):
+        print_server_log("LOGIN FAILED")
+        okMessage = "501 Not Implemented"
+    else: 
+        username = lines[4][10:len(lines[4])]
+        password = lines[5][10:len(lines[5])]
+        okMessage, mess,cookie = login_request(username, password, accounts)
+    sessionCookies.update({cookie:username})
+
     return okMessage
 
 
         
-def get_current_time():
-    t= datetime.datetime.now()
-    return "{}-{}-{}-{}-{}-{}".format(t.year,t.month,t.day,t.hour,t.minute,t.day)
+
 
 
 #ALERT ALERT ALERT NOAM ARANA IS GAY, REPEAT NOAM ARANA IS GAY!!!!
@@ -87,11 +98,11 @@ def login_request(username, password, accounts_file):
         message = (f'LOGIN SUCCESSFUL: {username} : {password}')
 
         # Return the cookie and the status code with the message
-        return f"HTTP/1.1 200 OK\r\nSet-Cookie: sessionID={session_id}\r\n\r\nLogged in!", message
+        return f"HTTP/1.1 200 OK\r\nSet-Cookie: sessionID={session_id}\r\n\r\nLogged in!\r\n\r\n", message,session_id
     else:
         message = (f'LOGIN FAILED: {username} : {password}')
         # Return the status code with the message
-        return "HTTP/1.1 200 OK\r\n\r\nLogin failed!", message
+        return "HTTP/1.1 200 OK\r\n\r\nLogin failed!\r\n\r\n", message, session_id
 
 #This function handles the login credentials for a given user. It returns True if the credentials are correct and False otherwise.    
 def handle_login_credentials(username, password, accounts):
