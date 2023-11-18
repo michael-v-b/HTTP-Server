@@ -15,6 +15,7 @@ def main():
     session_timeout = sys.argv[4]
     root_directory = sys.argv[5]
     sessionCookies = {}
+
     with open(accounts_file, 'r') as f:
         accounts = json.load(f)
 
@@ -38,8 +39,9 @@ def main():
                 if "POST" in command:
                     okMessage = post_command(lines,accounts,sessionCookies)
                     client.send(okMessage.encode())
+                    client.close()
                 elif "GET" in command:
-                    getMessage = get_command(root_directory)
+                    getMessage = get_command(lines,root_directory,session_timeout,sessionCookies)
                     break
                 else:
                     print("happens : {}".format(command))
@@ -56,8 +58,32 @@ def print_server_log (message):
     print("SERVER LOG: " + time_string + " " + message)
     return t
 
-def get_command(root_directory,username):
-    print("test")
+def get_command(lines,root_directory,session_timeout,sessionCookies):
+    okMessage = ""
+    split_command = lines[0].split(" ")
+    if(len(lines) >= 4):
+         lines[3] = lines[3].trim()
+         target = lines[3][len(lines[3])-1]
+         sessionID = lines[4][15:len(lines[4])]
+         
+    else:
+        print_server_log("COOKIE INVALID")
+        okMessage = "401 unauthorized"
+
+    if sessionID in sessionCookies:
+        current_time = datetime.datetime.now()
+        username, last_time = sessionCookies[sessionID]
+        
+        #if timed out
+        if((current_time-last_time).seconds > session_timeout):
+            print_server_log("SESSION EXPIRED: {} : {}".format(username,target))
+        else:
+            print("maybe")
+            
+        
+    return okMessage
+   
+
     
     
 def post_command(lines,accounts,sessionCookies):
@@ -69,8 +95,11 @@ def post_command(lines,accounts,sessionCookies):
     else: 
         username = lines[4][10:len(lines[4])]
         password = lines[5][10:len(lines[5])]
+        print_server_log("LOGIN SUCCESSFUL: {} : {}".format(username,password))
         okMessage, mess,cookie = login_request(username, password, accounts)
-    sessionCookies.update({cookie:username})
+        t = datetime.datetime.now()
+        sessionCookies.update({cookie:(username,t)})
+        
 
     return okMessage
 
