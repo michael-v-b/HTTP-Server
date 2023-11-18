@@ -35,12 +35,8 @@ def main():
                 command = lines[0]
 
                 if "POST" in command:
-                    currentTime = get_current_time()
-                    #get username
-                    username = lines[4][10:len(lines[4])]
-                    password = lines[5][10:len(lines[5])]
-                    okMessage, mess = login_request(username, password, accounts)
-                    print ("SERVER LOG: " + currentTime + " " + mess)
+                    okMessage = post_command(lines,accounts)
+                    client.send(okMessage.encode())
                 elif "GET" in command:
                     print("we got the get B)") 
                     break
@@ -56,7 +52,16 @@ def main():
     
 
     
-    return message
+def post_command(lines,accounts):
+    currentTime = get_current_time()
+    #get username
+    username = lines[4][10:len(lines[4])]
+    password = lines[5][10:len(lines[5])]
+    okMessage, mess = login_request(username, password, accounts)
+    print ("SERVER LOG: " + currentTime + " " + mess)
+    return okMessage
+
+
         
 def get_current_time():
     t= datetime.datetime.now()
@@ -65,17 +70,6 @@ def get_current_time():
 
 #ALERT ALERT ALERT NOAM ARANA IS GAY, REPEAT NOAM ARANA IS GAY!!!!
 
-def http_request():
-    lines = http_request.split("\r\n")
-    lines = lines[1:] #ignore the GET / HTTP/1.1
-    output = {}
-    for line in lines:
-        if not line:
-            continue
-        key,value = line.split(':', 1)
-        output[key] = value   
-    print(output)
-    return output
 
 def login_request(username, password, accounts_file):
     
@@ -111,3 +105,15 @@ def handle_login_credentials(username, password, accounts):
 
 if __name__ == "__main__":
     main()
+
+#def http_request():
+#    lines = http_request.split("\r\n")
+#    lines = lines[1:] #ignore the GET / HTTP/1.1
+#    output = {}
+#    for line in lines:
+#        if not line:
+#            continue
+#        key,value = line.split(':', 1)
+#        output[key] = value   
+#    print(output)
+#    return output
