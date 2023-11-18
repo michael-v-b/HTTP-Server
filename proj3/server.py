@@ -25,26 +25,24 @@ def main():
 
         with client:
             while True:
+                print("recieve message")
                 encoded_message = client.recv(1024)
-                print("encoded_message: {}".format(encoded_message))
-                message = encoded_message.decode()
-                print("message: {}".format(message))
-                lines = message.split("\r\n")
+
+                decoded_message = encoded_message.decode()
+                print("MESSAGE: " + decoded_message)
+                
+                lines = decoded_message.split("\r\n")
                 command = lines[0]
-                print("lines: {}".format(lines))
 
                 if "POST" in command:
+                    currentTime = get_current_time()
                     #get username
-                    print("lines[4]: {}".format(lines))
                     username = lines[4][10:len(lines[4])]
                     password = lines[5][10:len(lines[5])]
-                    print("username: {}".format(username.encode("ascii")))
-                    print("password: {}".format(password.encode("ascii")))
-                    message = login_request(username, password, accounts)
-                    print (message)
-                    break
+                    okMessage, mess = login_request(username, password, accounts)
+                    print ("SERVER LOG: " + currentTime + " " + mess)
                 elif "GET" in command:
-                    print("get it b") 
+                    print("we got the get B)") 
                     break
                 else:
                     print("happens : {}".format(command))
@@ -60,6 +58,10 @@ def main():
     
     return message
         
+def get_current_time():
+    t= datetime.datetime.now()
+    return "{}-{}-{}-{}-{}-{}".format(t.year,t.month,t.day,t.hour,t.minute,t.day)
+
 
 #ALERT ALERT ALERT NOAM ARANA IS GAY, REPEAT NOAM ARANA IS GAY!!!!
 
@@ -76,13 +78,11 @@ def http_request():
     return output
 
 def login_request(username, password, accounts_file):
-    t= datetime.datetime.now()
-    output = "SERVER LOG: {}-{}-{}-{}-{}-{} ".format(t.year,t.month,t.day,t.hour,t.minute,t.day)
+    
     # Validates "username" and "password" from headers, return 501 and log "LOGIN FAILED" if missing.
     if not username or not password:
         message = ('LOGIN FAILED')
-        print(output+message)
-        return "HTTP/1.1 501 Not Implemented\r\n\r\n"
+        return "HTTP/1.1 501 Not Implemented\r\n\r\n", message
     
     # Create a session with the given credentials. 
     valid_login_credentials = handle_login_credentials(username, password, accounts_file)
@@ -91,15 +91,13 @@ def login_request(username, password, accounts_file):
     if valid_login_credentials:
         session_id = random.getrandbits(64).to_bytes(8, "big").hex()
         message = (f'LOGIN SUCCESSFUL: {username} : {password}')
-        print(message)
 
         # Return the cookie and the status code with the message
-        return f"HTTP/1.1 200 OK\r\nSet-Cookie: sessionID={session_id}\r\n\r\nLogged in!"
+        return f"HTTP/1.1 200 OK\r\nSet-Cookie: sessionID={session_id}\r\n\r\nLogged in!", message
     else:
         message = (f'LOGIN FAILED: {username} : {password}')
-        print(output + message)
         # Return the status code with the message
-        return "HTTP/1.1 200 OK\r\n\r\nLogin failed!"
+        return "HTTP/1.1 200 OK\r\n\r\nLogin failed!", message
 
 #This function handles the login credentials for a given user. It returns True if the credentials are correct and False otherwise.    
 def handle_login_credentials(username, password, accounts):
