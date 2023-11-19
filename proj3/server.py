@@ -23,29 +23,48 @@ def main():
     
         httpSocket.bind((ip,int(port)))
         httpSocket.listen(5)
-        client,clientPort = httpSocket.accept()
 
-        with client:
-            while True:
-                print("recieve message")
-                encoded_message = client.recv(1024)
+        httpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow reusing the address
+        while True:
+            print("recieve message")
+            client,clientPort = httpSocket.accept()
 
-                decoded_message = encoded_message.decode()
-                print("MESSAGE: " + decoded_message)
-                
-                lines = decoded_message.split("\r\n")
-                command = lines[0]
+            with client:
+                client.settimeout(10.0)
+                while True:
+                    try:
+                        print("recieve message")
+                        encoded_message = client.recv(1024)
 
-                if "POST" in command:
-                    okMessage = post_command(lines,accounts,sessionCookies)
-                    client.send(okMessage.encode())
-                    client.close()
-                elif "GET" in command:
-                    getMessage = get_command(lines,root_directory,session_timeout,sessionCookies)
-                    break
-                else:
-                    print("happens : {}".format(command))
-                    break
+                        if not encoded_message:
+                            print("no message received")
+                            break
+
+                        decoded_message = encoded_message.decode()
+                        print("MESSAGE: " + decoded_message)
+                        
+                        lines = decoded_message.split("\r\n")
+                        command = lines[0]
+
+                        if "POST" in command:
+                            okMessage = post_command(lines,accounts,sessionCookies)
+                            client.send(okMessage.encode())
+                        elif "GET" in command:
+                            getMessage = get_command(lines,root_directory,session_timeout,sessionCookies)
+                            client.send(getMessage.encode())
+                        else:
+                            print("happens : {}".format(command))
+                            break
+
+                    except socket.timeout:
+                        print("Timeout!")
+                        break
+                    except socket.error as e:
+                        print(f"Socket error: {e}")
+                        break
+
+                client.close()
+                print("client closed")
 
         
 
@@ -61,8 +80,9 @@ def print_server_log (message):
 def get_command(lines,root_directory,session_timeout,sessionCookies):
     okMessage = ""
     split_command = lines[0].split(" ")
+    target = None
     if(len(lines) >= 4):
-         lines[3] = lines[3].trim()
+         lines[3] = lines[3].strip()
          target = lines[3][len(lines[3])-1]
          sessionID = lines[4][15:len(lines[4])]
          
@@ -77,11 +97,22 @@ def get_command(lines,root_directory,session_timeout,sessionCookies):
         #if timed out
         if((current_time-last_time).seconds > session_timeout):
             print_server_log("SESSION EXPIRED: {} : {}".format(username,target))
-        else:
-            print("maybe")
-            
+            return "401 Unauthorized"
         
-    return okMessage
+        sessionCookies[sessionID] = (username, current_time)
+        file_path = f"{root_directory}/{username}/{target}"
+        
+        try:
+            with open(file_path, 'r') as file:
+                file_contents = file.read()
+                print_server_log("GET SUCCEEDED: {} : {}".format(username,target))
+                return "200 OK", file_contents
+        except FileNotFoundError:
+            print_server_log("GET FAILED: {} : {}".format(username,target))
+            return "404 NOT FOUND"
+    else:
+        print_server_log("COOKIE INVALID: {}".format(target))
+        return "401 Unauthorized"
    
 
     
