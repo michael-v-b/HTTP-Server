@@ -24,48 +24,53 @@ def main():
         httpSocket.bind((ip,int(port)))
         httpSocket.listen(5)
 
-        httpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow reusing the address
+        httpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         while True:
             print("recieve message")
             client,clientPort = httpSocket.accept()
 
             with client:
                 client.settimeout(10.0)
-                while True:
-                    try:
-                        print("recieve message")
-                        encoded_message = client.recv(1024)
+                try:
+                    print("recieve message")
+                    encoded_message = client.recv(1024)
 
-                        if not encoded_message:
-                            print("no message received")
-                            break
+                    if not encoded_message:
+                        print("No message received")
+                        client.close()
+                        continue
 
-                        decoded_message = encoded_message.decode()
-                        print("MESSAGE: " + decoded_message)
-                        
-                        lines = decoded_message.split("\r\n")
-                        command = lines[0]
+                    decoded_message = encoded_message.decode()
+                    print("MESSAGE: " + decoded_message)
+                    
+                    lines = decoded_message.split("\r\n")
+                    command = lines[0]
 
-                        if "POST" in command:
-                            okMessage = post_command(lines,accounts,sessionCookies)
-                            client.send(okMessage.encode())
-                        elif "GET" in command:
-                            getMessage = get_command(lines,root_directory,session_timeout,sessionCookies)
-                            client.send(getMessage.encode())
-                        else:
-                            print("happens : {}".format(command))
-                            break
+                    valid_request = True 
 
-                    except socket.timeout:
-                        print("Timeout!")
-                        break
-                    except socket.error as e:
-                        print(f"Socket error: {e}")
+                    if "POST" in command:
+                        okMessage = post_command(lines,accounts,sessionCookies)
+                        client.send(okMessage.encode())
+                    elif "GET" in command:
+                        getMessage = get_command(lines,root_directory,session_timeout,sessionCookies)
+                        client.send(getMessage.encode())
+                    else:
+                        print("happens : {}".format(command))
                         break
 
-                client.close()
-                print("client closed")
+                    if not valid_request:
+                        print("Invalid request. Closing connection.")
+                        client.close()
 
+                except socket.timeout:
+                    print("Timeout!")
+                    break
+                except socket.error as e:
+                    print(f"Socket error: {e}")
+                    break
+                finally:
+                    client.shutdown(socket.SHUT_RDWR)
+                    print("client closed")
         
 
  
@@ -106,13 +111,13 @@ def get_command(lines,root_directory,session_timeout,sessionCookies):
             with open(file_path, 'r') as file:
                 file_contents = file.read()
                 print_server_log("GET SUCCEEDED: {} : {}".format(username,target))
-                return "200 OK", file_contents
+                return "HTTP/1.1 200 OK\r\n\r\n" + file_contents, True
         except FileNotFoundError:
             print_server_log("GET FAILED: {} : {}".format(username,target))
             return "404 NOT FOUND"
     else:
         print_server_log("COOKIE INVALID: {}".format(target))
-        return "401 Unauthorized"
+        return "HTTP/1.1 401 Unauthorized\r\n\r\n", False
    
 
     
