@@ -30,7 +30,7 @@ def main():
             client,clientPort = httpSocket.accept()
 
             with client:
-                client.settimeout(10.0)
+                client.settimeout(float(session_timeout))
                 try:
                     print("recieve message")
                     encoded_message = client.recv(1024)
@@ -52,7 +52,8 @@ def main():
                         okMessage = post_command(lines,accounts,sessionCookies)
                         client.send(okMessage.encode())
                     elif "GET" in command:
-                        getMessage = get_command(lines,root_directory,session_timeout,sessionCookies)
+                        getMessage,works = get_command(lines,root_directory,session_timeout,sessionCookies)
+                        print("getMessage: {}".format(getMessage))
                         client.send(getMessage.encode())
                     else:
                         print("happens : {}".format(command))
@@ -83,24 +84,27 @@ def print_server_log (message):
     return t
 
 def get_command(lines,root_directory,session_timeout,sessionCookies):
-    okMessage = ""
+
+
     split_command = lines[0].split(" ")
-    target = None
     if(len(lines) >= 4):
          lines[3] = lines[3].strip()
-         target = lines[3][len(lines[3])-1]
-         sessionID = lines[4][15:len(lines[4])]
+         target = split_command[1]
+         sessionID = lines[4][19:len(lines[4])].strip()
          
     else:
         print_server_log("COOKIE INVALID")
         okMessage = "401 unauthorized"
 
+    print("sessionID: {}".format(sessionID))
+    print("sessionCookies: {}".format(sessionCookies))
+    
     if sessionID in sessionCookies:
         current_time = datetime.datetime.now()
         username, last_time = sessionCookies[sessionID]
         
         #if timed out
-        if((current_time-last_time).seconds > session_timeout):
+        if((current_time-last_time).seconds > float(session_timeout)):
             print_server_log("SESSION EXPIRED: {} : {}".format(username,target))
             return "401 Unauthorized"
         
