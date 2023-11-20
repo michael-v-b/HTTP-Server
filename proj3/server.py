@@ -76,6 +76,9 @@ def get_command(lines,root_directory,session_timeout,sessionCookies):
     else:
         okMessage = "401 unauthorized"
         return okMessage, False
+    
+
+   
     if sessionID in sessionCookies:
         current_time = datetime.datetime.now()
         username, last_time = sessionCookies[sessionID]
@@ -95,7 +98,7 @@ def get_command(lines,root_directory,session_timeout,sessionCookies):
             print_server_log("GET FAILED: {} : {}".format(username,target))
             return "404 NOT FOUND"
     else:
-        print_server_log("COOKIE INVALID: {}".format(target))
+        print_server_log("COOKIE INVALID: {}".format(sessionID))
         return "HTTP/1.1 401 Unauthorized\r\n\r\n", False
     
 #Processes POST requests for user authentication and session initialization.
