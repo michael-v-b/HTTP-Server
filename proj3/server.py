@@ -1,8 +1,8 @@
 import hashlib, json, random, sys, socket, datetime
 
 
+# Initializes the server, listens for connections, and routes HTTP requests to appropriate handlers.
 def main():
-
     # Checks for the correct number of command-line arguments
     if len(sys.argv) != 6:
         print("Usage: python3 server.py [IP] [PORT] [ACCOUNTS_FILE] [SESSION_TIMEOUT] [ROOT_DIRECTORY]")
@@ -20,29 +20,21 @@ def main():
         accounts = json.load(f)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as httpSocket:
-    
         httpSocket.bind((ip,int(port)))
         httpSocket.listen(5)
-
         httpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        while True:
-            print("recieve message")
-            client,clientPort = httpSocket.accept()
 
+        while True:
+            client,clientPort = httpSocket.accept()
             with client:
                 client.settimeout(float(session_timeout))
                 try:
-                    print("recieve message")
                     encoded_message = client.recv(1024)
-
                     if not encoded_message:
-                        print("No message received")
                         client.close()
                         continue
 
                     decoded_message = encoded_message.decode()
-                    print("MESSAGE: " + decoded_message)
-                    
                     lines = decoded_message.split("\r\n")
                     command = lines[0]
 
@@ -53,57 +45,38 @@ def main():
                         client.send(okMessage.encode())
                     elif "GET" in command:
                         getMessage,works = get_command(lines,root_directory,session_timeout,sessionCookies)
-                        print("getMessage: {}".format(getMessage))
                         client.send(getMessage.encode())
                     else:
-                        print("happens : {}".format(command))
                         break
-
                     if not valid_request:
-                        print("Invalid request. Closing connection.")
                         client.close()
-
                 except socket.timeout:
-                    print("Timeout!")
                     break
                 except socket.error as e:
-                    print(f"Socket error: {e}")
                     break
                 finally:
                     client.shutdown(socket.SHUT_RDWR)
-                    print("client closed")
         
-
- 
-
-    # Get the username and password from the user.
+# Logs server events with a timestamp
 def print_server_log (message):
     t= datetime.datetime.now()
     time_string =  "{}-{}-{}-{}-{}-{}".format(t.year,t.month,t.day,t.hour,t.minute,t.day)
     print("SERVER LOG: " + time_string + " " + message)
     return t
 
+# Handles GET requests by validating sessions and serving requested files.
 def get_command(lines,root_directory,session_timeout,sessionCookies):
-
-
     split_command = lines[0].split(" ")
     if(len(lines) >= 4):
          lines[3] = lines[3].strip()
          target = split_command[1]
          sessionID = lines[4][19:len(lines[4])].strip()
-         
     else:
-        print_server_log("COOKIE INVALID")
         okMessage = "401 unauthorized"
-
-    print("sessionID: {}".format(sessionID))
-    print("sessionCookies: {}".format(sessionCookies))
-    
+        return okMessage, False
     if sessionID in sessionCookies:
         current_time = datetime.datetime.now()
         username, last_time = sessionCookies[sessionID]
-        
-        #if timed out
         if((current_time-last_time).seconds > float(session_timeout)):
             print_server_log("SESSION EXPIRED: {} : {}".format(username,target))
             return "401 Unauthorized"
@@ -122,10 +95,8 @@ def get_command(lines,root_directory,session_timeout,sessionCookies):
     else:
         print_server_log("COOKIE INVALID: {}".format(target))
         return "HTTP/1.1 401 Unauthorized\r\n\r\n", False
-   
-
     
-    
+#Processes POST requests for user authentication and session initialization.
 def post_command(lines,accounts,sessionCookies):
     #get username
     okMessage = ""
@@ -139,43 +110,29 @@ def post_command(lines,accounts,sessionCookies):
         okMessage, mess,cookie = login_request(username, password, accounts)
         t = datetime.datetime.now()
         sessionCookies.update({cookie:(username,t)})
-        
-
     return okMessage
 
-
-        
-
-
-
-#ALERT ALERT ALERT NOAM ARANA IS GAY, REPEAT NOAM ARANA IS GAY!!!!
-
-
+# Validates user credentials and returns appropriate HTTP responses for login attempts.
 def login_request(username, password, accounts_file):
-    
     # Validates "username" and "password" from headers, return 501 and log "LOGIN FAILED" if missing.
     if not username or not password:
         message = ('LOGIN FAILED')
         return "HTTP/1.1 501 Not Implemented\r\n\r\n", message
-    
     # Create a session with the given credentials. 
     valid_login_credentials = handle_login_credentials(username, password, accounts_file)
-
     # Validates creds, sets 64-bit hex sessionID cookie, create & log session, return HTTP 200 with "Logged in!"
     if valid_login_credentials:
         session_id = random.getrandbits(64).to_bytes(8, "big").hex()
         message = (f'LOGIN SUCCESSFUL: {username} : {password}')
-
         # Return the cookie and the status code with the message
         return f"HTTP/1.1 200 OK\r\nSet-Cookie: sessionID={session_id}\r\n\r\nLogged in!\r\n\r\n", message,session_id
     else:
         message = (f'LOGIN FAILED: {username} : {password}')
         # Return the status code with the message
         return "HTTP/1.1 200 OK\r\n\r\nLogin failed!\r\n\r\n", message, session_id
-
+    
 #This function handles the login credentials for a given user. It returns True if the credentials are correct and False otherwise.    
 def handle_login_credentials(username, password, accounts):
-
     # Retrieve user info from accounts
     if username in accounts:
         recorded_hashed_password,salt = accounts[username]
@@ -185,15 +142,3 @@ def handle_login_credentials(username, password, accounts):
 
 if __name__ == "__main__":
     main()
-
-#def http_request():
-#    lines = http_request.split("\r\n")
-#    lines = lines[1:] #ignore the GET / HTTP/1.1
-#    output = {}
-#    for line in lines:
-#        if not line:
-#            continue
-#        key,value = line.split(':', 1)
-#        output[key] = value   
-#    print(output)
-#    return output
