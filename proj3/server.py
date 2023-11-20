@@ -43,9 +43,11 @@ def main():
                     if "POST" in command:
                         okMessage = post_command(lines,accounts,sessionCookies)
                         client.send(okMessage.encode())
+                        client.close()
                     elif "GET" in command:
                         getMessage,works = get_command(lines,root_directory,session_timeout,sessionCookies)
                         client.send(getMessage.encode())
+                        client.close()
                     else:
                         break
                     if not valid_request:
@@ -55,7 +57,7 @@ def main():
                 except socket.error as e:
                     break
                 finally:
-                    client.shutdown(socket.SHUT_RDWR)
+                    client.close()
         
 # Logs server events with a timestamp
 def print_server_log (message):
