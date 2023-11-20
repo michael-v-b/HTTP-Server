@@ -84,7 +84,7 @@ def get_command(lines,root_directory,session_timeout,sessionCookies):
         username, last_time = sessionCookies[sessionID]
         if((current_time-last_time).seconds > float(session_timeout)):
             print_server_log("SESSION EXPIRED: {} : {}".format(username,target))
-            return "401 Unauthorized"
+            return "401 Unauthorized",False
         
         sessionCookies[sessionID] = (username, current_time)
         file_path = f"{root_directory}/{username}/{target}"
@@ -92,6 +92,7 @@ def get_command(lines,root_directory,session_timeout,sessionCookies):
         try:
             with open(file_path, 'r') as file:
                 file_contents = file.read()
+                sessionCookies[sessionID] = (username,current_time)
                 print_server_log("GET SUCCEEDED: {} : {}".format(username,target))
                 return "HTTP/1.1 200 OK\r\n\r\n" + file_contents, True
         except FileNotFoundError:
@@ -108,33 +109,38 @@ def post_command(lines,accounts,sessionCookies):
     if(len(lines) < 5 or len(lines[4]) < 10 or len(lines[5]) < 10):
         print_server_log("LOGIN FAILED")
         okMessage = "501 Not Implemented"
-    else: 
+    else:
         username = lines[4][10:len(lines[4])]
         password = lines[5][10:len(lines[5])]
-        print_server_log("LOGIN SUCCESSFUL: {} : {}".format(username,password))
-        okMessage, mess,cookie = login_request(username, password, accounts)
+        
+        okMessage, logged_in,cookie = login_request(username, password, accounts)
+        if(logged_in):
+            print_server_log("LOGIN SUCCESSFUL: {} : {}".format(username,password))
+        else:
+            print_server_log("LOGIN FAILED:{}:{}".format(username,password))
         t = datetime.datetime.now()
-        sessionCookies.update({cookie:(username,t)})
+        sessionCookies[cookie] = (username,t)
     return okMessage
 
 # Validates user credentials and returns appropriate HTTP responses for login attempts.
 def login_request(username, password, accounts_file):
     # Validates "username" and "password" from headers, return 501 and log "LOGIN FAILED" if missing.
+    session_id = random.getrandbits(64).to_bytes(8, "big").hex()
+
     if not username or not password:
-        message = ('LOGIN FAILED')
-        return "HTTP/1.1 501 Not Implemented\r\n\r\n", message
+        return "HTTP/1.1 501 Not Implemented", False, session_id
     # Create a session with the given credentials. 
     valid_login_credentials = handle_login_credentials(username, password, accounts_file)
     # Validates creds, sets 64-bit hex sessionID cookie, create & log session, return HTTP 200 with "Logged in!"
     if valid_login_credentials:
         session_id = random.getrandbits(64).to_bytes(8, "big").hex()
-        message = (f'LOGIN SUCCESSFUL: {username} : {password}')
+
         # Return the cookie and the status code with the message
-        return f"HTTP/1.1 200 OK\r\nSet-Cookie: sessionID={session_id}\r\n\r\nLogged in!\r\n\r\n", message,session_id
+        return f"HTTP/1.1 200 OK\r\nSet-Cookie: sessionID={session_id}\r\n\r\nLogged in!", True, session_id
     else:
-        message = (f'LOGIN FAILED: {username} : {password}')
+
         # Return the status code with the message
-        return "HTTP/1.1 200 OK\r\n\r\nLogin failed!\r\n\r\n", message, session_id
+        return "HTTP/1.1 200 OK\r\n\r\nLogin failed!", False, session_id
     
 #This function handles the login credentials for a given user. It returns True if the credentials are correct and False otherwise.    
 def handle_login_credentials(username, password, accounts):
