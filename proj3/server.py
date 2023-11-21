@@ -25,7 +25,9 @@ def main():
         httpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         while True:
+        
             client,clientPort = httpSocket.accept()
+            
             with client:
                 client.settimeout(float(session_timeout))
                 try:
@@ -37,9 +39,8 @@ def main():
                     decoded_message = encoded_message.decode()
                     lines = decoded_message.split("\r\n")
                     command = lines[0]
-
                     valid_request = True 
-
+                    
                     if "POST" in command:
                         okMessage = post_command(lines,accounts,sessionCookies)
                         client.send(okMessage.encode())
