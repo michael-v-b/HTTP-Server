@@ -55,7 +55,7 @@ def main():
                     else:
                         break
 
-                    print("--------------------------------\r\noutput: {}\r\n--------------------------".format(okMessage))
+                    #print("--------------------------------\r\noutput: {}\r\n--------------------------".format(okMessage))
                     if not valid_request:
                         client.close()
         
@@ -66,6 +66,7 @@ def print_server_log (message):
     print("SERVER LOG: " + time_string + " " + message)
     return t
 
+
 # Handles GET requests by validating sessions and serving requested files.
 def get_command(lines,root_directory,session_timeout,sessionCookies):
     split_command = lines[0].split(" ")
@@ -74,7 +75,7 @@ def get_command(lines,root_directory,session_timeout,sessionCookies):
          target = split_command[1]
          sessionID = lines[4][19:len(lines[4])].strip()
     else:
-        okMessage = "401 unauthorized"
+        okMessage = "401 Unauthorized"
         return okMessage, False
     
 
@@ -82,32 +83,35 @@ def get_command(lines,root_directory,session_timeout,sessionCookies):
     if sessionID in sessionCookies:
         current_time = datetime.datetime.now()
         username, last_time = sessionCookies[sessionID]
-        if((current_time-last_time).seconds > float(session_timeout)):
-            print_server_log("SESSION EXPIRED: {} : {} ".format(username,target))
-            return "401 Unauthorized",False
+
         
-        sessionCookies[sessionID] = (username, current_time)
-        file_path = f"{root_directory}/{username}/{target}"
+        if((current_time-last_time).seconds > float(session_timeout)):
+            print_server_log("SESSION EXPIRED: {} : {}".format(username,target))
+            return "401 Unauthorized\r\n",False
+            
+        
+            sessionCookies[sessionID] = (username, current_time)
+        file_path = f"{root_directory}//{username}//{target}"
         
         try:
             with open(file_path, 'r') as file:
                 file_contents = file.read()
                 sessionCookies[sessionID] = (username,current_time)
-                print_server_log("GET SUCCEEDED: {} : {} ".format(username,target))
-                return "HTTP/1.1 200 OK\r\n\r\n" + file_contents, True
+                print_server_log("GET SUCCEEDED: {} : {}".format(username,target))
+                return "HTTP/1.0 200 OK\r\n\r\n" + file_contents, True
         except FileNotFoundError:
             print_server_log("GET FAILED: {} : {} ".format(username,target))
-            return "404 NOT FOUND",False
+            return "404 NOT FOUND\r\n",False
     else:
-        print_server_log("COOKIE INVALID: {}".format(sessionID))
-        return "HTTP/1.1 401 Unauthorized\r\n\r\n", False
+        print_server_log("COOKIE INVALID: {}".format(target))
+        return "HTTP/1.0 401 Unauthorized\r\n\r\n", False
     
 #Processes POST requests for user authentication and session initialization.
 def post_command(lines,accounts,sessionCookies):
     #get username
     okMessage = ""
     if(len(lines) < 5 or len(lines[4]) < 10 or len(lines[5]) < 10):
-        print_server_log("LOGIN FAILED ")
+        print_server_log("LOGIN FAILED")
         okMessage = "501 Not Implemented"
     else:
         username = lines[4][10:len(lines[4])]
@@ -128,7 +132,7 @@ def login_request(username, password, accounts_file):
     session_id = random.getrandbits(64).to_bytes(8, "big").hex()
 
     if not username or not password:
-        return "HTTP/1.1 501 Not Implemented", False, session_id
+        return "HTTP/1.0 501 Not Implemented", False, session_id
     # Create a session with the given credentials. 
     valid_login_credentials = handle_login_credentials(username, password, accounts_file)
     # Validates creds, sets 64-bit hex sessionID cookie, create & log session, return HTTP 200 with "Logged in!"
@@ -136,11 +140,11 @@ def login_request(username, password, accounts_file):
         session_id = random.getrandbits(64).to_bytes(8, "big").hex()
 
         # Return the cookie and the status code with the message
-        return f"HTTP/1.1 200 OK\r\nSet-Cookie: sessionID={session_id}\r\n\r\nLogged in!", True, session_id
+        return f"HTTP/1.0 200 OK\r\nSet-Cookie: sessionID={session_id}\r\n\r\nLogged in!", True, session_id
     else:
 
         # Return the status code with the message
-        return "HTTP/1.1 200 OK\r\n\r\nLogin failed!", False, session_id
+        return "HTTP/1.0 200 OK\r\n\r\nLogin failed!", False, session_id
     
 #This function handles the login credentials for a given user. It returns True if the credentials are correct and False otherwise.    
 def handle_login_credentials(username, password, accounts):
