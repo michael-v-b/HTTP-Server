@@ -62,7 +62,7 @@ def main():
 # Logs server events with a timestamp
 def print_server_log (message):
     t= datetime.datetime.now()
-    time_string =  "{}-{}-{}-{}-{}-{}".format(t.year,t.month,t.day,t.hour,t.minute,t.day)
+    time_string =  "{}-{}-{}-{}-{}-{}".format(t.year,t.month,t.day,t.hour,t.minute,t.second)
     print("SERVER LOG: " + time_string + " " + message)
     return t
 
@@ -83,14 +83,11 @@ def get_command(lines,root_directory,session_timeout,sessionCookies):
     if sessionID in sessionCookies:
         current_time = datetime.datetime.now()
         username, last_time = sessionCookies[sessionID]
-
-        
         if((current_time-last_time).seconds > float(session_timeout)):
             print_server_log("SESSION EXPIRED: {} : {}".format(username,target))
             return "401 Unauthorized\r\n",False
-            
         
-            sessionCookies[sessionID] = (username, current_time)
+        sessionCookies[sessionID] = (username, current_time)
         file_path = f"{root_directory}//{username}//{target}"
         
         try:
