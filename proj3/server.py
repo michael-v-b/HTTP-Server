@@ -23,14 +23,18 @@ def main():
         httpSocket.bind((ip,int(port)))
         httpSocket.listen(5)
         httpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
+        httpSocket.settimeout(2*float(session_timeout))
         while True:
-        
-            client,clientPort = httpSocket.accept()
+            try:
+                client,clientPort = httpSocket.accept()
+            except socket.timeout:
+                break
+            except socket.error as e:
+                break
+            else:
             
-            with client:
-                client.settimeout(float(session_timeout))
-                try:
+                with client:
+                    
                     encoded_message = client.recv(1024)
                     if not encoded_message:
                         client.close()
@@ -53,12 +57,6 @@ def main():
                         break
                     if not valid_request:
                         client.close()
-                except socket.timeout:
-                    break
-                except socket.error as e:
-                    break
-                finally:
-                    client.close()
         
 # Logs server events with a timestamp
 def print_server_log (message):
@@ -98,7 +96,7 @@ def get_command(lines,root_directory,session_timeout,sessionCookies):
                 return "HTTP/1.1 200 OK\r\n\r\n" + file_contents, True
         except FileNotFoundError:
             print_server_log("GET FAILED: {} : {}".format(username,target))
-            return "404 NOT FOUND"
+            return "404 NOT FOUND",False
     else:
         print_server_log("COOKIE INVALID: {}".format(sessionID))
         return "HTTP/1.1 401 Unauthorized\r\n\r\n", False
