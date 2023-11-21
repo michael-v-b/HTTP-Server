@@ -32,7 +32,6 @@ def main():
             except socket.error as e:
                 break
             else:
-            
                 with client:
                     
                     encoded_message = client.recv(1024)
@@ -50,11 +49,13 @@ def main():
                         client.send(okMessage.encode())
                         client.close()
                     elif "GET" in command:
-                        getMessage,works = get_command(lines,root_directory,session_timeout,sessionCookies)
-                        client.send(getMessage.encode())
+                        okMessage,works = get_command(lines,root_directory,session_timeout,sessionCookies)
+                        client.send(okMessage.encode())
                         client.close()
                     else:
                         break
+
+                    print("--------------------------------\r\noutput: {}\r\n--------------------------".format(okMessage))
                     if not valid_request:
                         client.close()
         
@@ -82,7 +83,7 @@ def get_command(lines,root_directory,session_timeout,sessionCookies):
         current_time = datetime.datetime.now()
         username, last_time = sessionCookies[sessionID]
         if((current_time-last_time).seconds > float(session_timeout)):
-            print_server_log("SESSION EXPIRED: {} : {}".format(username,target))
+            print_server_log("SESSION EXPIRED: {} : {} ".format(username,target))
             return "401 Unauthorized",False
         
         sessionCookies[sessionID] = (username, current_time)
@@ -92,10 +93,10 @@ def get_command(lines,root_directory,session_timeout,sessionCookies):
             with open(file_path, 'r') as file:
                 file_contents = file.read()
                 sessionCookies[sessionID] = (username,current_time)
-                print_server_log("GET SUCCEEDED: {} : {}".format(username,target))
+                print_server_log("GET SUCCEEDED: {} : {} ".format(username,target))
                 return "HTTP/1.1 200 OK\r\n\r\n" + file_contents, True
         except FileNotFoundError:
-            print_server_log("GET FAILED: {} : {}".format(username,target))
+            print_server_log("GET FAILED: {} : {} ".format(username,target))
             return "404 NOT FOUND",False
     else:
         print_server_log("COOKIE INVALID: {}".format(sessionID))
@@ -106,7 +107,7 @@ def post_command(lines,accounts,sessionCookies):
     #get username
     okMessage = ""
     if(len(lines) < 5 or len(lines[4]) < 10 or len(lines[5]) < 10):
-        print_server_log("LOGIN FAILED")
+        print_server_log("LOGIN FAILED ")
         okMessage = "501 Not Implemented"
     else:
         username = lines[4][10:len(lines[4])]
@@ -114,9 +115,9 @@ def post_command(lines,accounts,sessionCookies):
         
         okMessage, logged_in,cookie = login_request(username, password, accounts)
         if(logged_in):
-            print_server_log("LOGIN SUCCESSFUL: {} : {}".format(username,password))
+            print_server_log("LOGIN SUCCESSFUL: {} : {} ".format(username,password))
         else:
-            print_server_log("LOGIN FAILED:{}:{}".format(username,password))
+            print_server_log("LOGIN FAILED: {} : {} ".format(username,password))
         t = datetime.datetime.now()
         sessionCookies[cookie] = (username,t)
     return okMessage
