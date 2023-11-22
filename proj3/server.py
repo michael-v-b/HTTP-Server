@@ -69,16 +69,22 @@ def print_server_log (message):
 
 # Handles GET requests by validating sessions and serving requested files.
 def get_command(lines,root_directory,session_timeout,sessionCookies):
-    split_command = lines[0].split(" ")
     if(len(lines) >= 4):
+         split_command = lines[0].split(" ")
          lines[3] = lines[3].strip()
          target = split_command[1]
-         sessionID = lines[4][19:len(lines[4])].strip()
     else:
-        okMessage = "401 Unauthorized"
-        return okMessage, False
+        return "401 Unauthorized", False
     
+    sessionID = None
+    
+    for line in lines:
+        if line.startswith('Cookie: sessionID='):
+            sessionID = line[len('Cookie: sessionID='):].strip()
+            break
 
+    if not sessionID:
+        return "401 Unauthorized", False
    
     if sessionID in sessionCookies:
         current_time = datetime.datetime.now()
